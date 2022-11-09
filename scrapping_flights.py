@@ -14,39 +14,46 @@ def check_status(url):
         return True
     return "the status code's not 200"
 
-def get_url(url):
-    # open the web page at the indicated url and click on "Accepter" button
-    driver_service = Service(executable_path='chromedriver')
-    driver = webdriver.Chrome(service=driver_service)
+def scrapp_and_send(url, driver):
+    get_url(url, driver)
+    Accept_button(driver)
+    get_datas(driver)
+
+def get_url(url, driver):
+    # open the web page at the indicated url 
     driver.get(url)
     driver.maximize_window()
     time.sleep(3)
 
+def Accept_button(driver):
+    #click on "Accepter" button    
     all_buttons = driver.find_elements(By.TAG_NAME, 'button')
     accepted_button = [btn for btn in all_buttons if btn.text == 'Accepter']
     
     for btn in accepted_button:
         btn.click()
+        time.sleep(2)
 
-    see_more(driver)
+def get_datas(driver):
+    all_buttons = driver.find_elements(By.CLASS_NAME, "_TS")
 
-def see_more(driver):
-    #click on 'Voir plus de destinations' button everytime there is 1
-    see_more_button = True
-    while see_more_button:
-        #get all buttons
-        buttons = driver.find_elements(By.TAG_NAME, 'button')
-        #select 'Voir plus de destinations' button and click on it
-        see_more_button = [btn for btn in buttons if btn.text == 'Voir plus de destinations']
+    for btn in all_buttons:
+        btn.click()
+        time.sleep(2)
+        link = driver.find_element(By.XPATH, "//a[@role='link']")
+        lien = link.get_attribute('href')
+        get_url(lien, driver)
+        datas = driver.find_elements(By.CLASS_NAME, 'container')
+        for data in datas[:5]:
+            print(data.text)
+            print("-"*20)
+        break
 
-        if see_more_button:
-            for btn in see_more_button:
-                btn.click()
-                time.sleep(2)
-        else:
-            see_more_button = False
-
+    
 if __name__ == "__main__":
     url = 'https://www.kayak.fr/explore/PAR-anywhere/20221125,20221127'
+    driver_service = Service(executable_path='chromedriver')
+    driver = webdriver.Chrome(service=driver_service)
+
     if check_status(url):
-        get_url(url)
+        scrapp_and_send(url,driver)
