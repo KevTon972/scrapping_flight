@@ -1,10 +1,10 @@
 """automate flight ticket search"""
-from selenium import webdriver
 import requests
 import time
 import json
 import os
 
+from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -15,19 +15,18 @@ def check_status(url):
     response = requests.get(url)
     if response.ok:
         return True
-    return "the status code's not 200"
+    return False
 
 def get_url(url, driver):
     # open the web page at the indicated url 
     driver.get(url)
     driver.maximize_window()
-    time.sleep(3)
+    time.sleep(5)
 
 def Accept_button(driver):
     #click on "Accepter" button    
     try:
-        all_buttons = WebDriverWait(driver, 10).until(
-        EC.presence_of_all_elements_located((By.TAG_NAME, 'button')))
+        all_buttons = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.TAG_NAME, 'button')))
         accepted_button = [btn for btn in all_buttons if btn.text == 'Accepter']
 
         for btn in accepted_button:
@@ -37,10 +36,11 @@ def Accept_button(driver):
 
 def get_datas(url, driver):
     flight_info = {}
+
     for i in range(3):
     #get destinations buttons and click on each button
         try:
-            all_buttons = WebDriverWait(driver, 60).until(EC.presence_of_all_elements_located((By.CLASS_NAME, '_TS'))) 
+            all_buttons = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CLASS_NAME, '_TS'))) 
 
             for btn in all_buttons:
                 if btn.text == btn.text:
@@ -54,31 +54,36 @@ def get_datas(url, driver):
             
         try:
             #get the link to flight info
-            link_page = WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, "//a[@role='link']")))
+            link_page = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, "//a[@role='link']")))
             link = link_page.get_attribute('href')
 
-            #get city's name
-            city_name = driver.find_element(By.CLASS_NAME, "last-crumb").text    
+            #get city's name   
+            city_name = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'last-crumb'))).text    
             get_url(link, driver)
 
-            datas = WebDriverWait(driver, 60).until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'mainInfo')))
-            prices = driver.find_elements(By.CLASS_NAME, 'right-alignment')
-            compagnies = driver.find_elements(By.CLASS_NAME, 'codeshares-airline-names')
-            for i in range(4):
-            #get flight infos and ad them to a dict   
+            #get flight infos(main info, flights price, compagnies names, link to reservation) and add them to a dict  
+            raw_datas = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'mainInfo')))
+            clean_datas = [data.text.replace("\n", " ") for data in raw_datas]
+            prices = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'right-alignment')))
+            compagnies = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'codeshares-airline-names')))
+            link_flights_tickets = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'booking-link ')))  
+
+            for i in range(3):
                 price = prices[i].text.replace("\n","")
-                real_price = "".join([number for number in price[2:5]])
-                data = datas[i].text.replace('\n', ' ')
-                flight_info[city_name]= {compagnies[i].text : f"{data} prix: {real_price.replace(' ', '')}€"}
+                real_price = "".join([number for number in price[2:5]]).replace(" ","")
+                compagny = [comp.text for comp in compagnies]
+                link_flight_ticket = link_flights_tickets[i].get_attribute('href')
+                flight_info[f"{city_name},{i}"]= f"{compagny[i]} {clean_datas[i]} prix: {real_price}€, Reservez: {link_flight_ticket}"
 
             get_url(url, driver)
             
         except:
             driver.quit()
-    print(flight_info)
+    
     save(flight_info)
 
 def save(dict):
+    #create a json file and save dict in it
     CUR_DIR = os.path.dirname(__file__)
     file_path = os.path.join(CUR_DIR, "scrapping_flights.json")
 
