@@ -1,4 +1,4 @@
-"""automate flight ticket search"""
+"""automate flights tickets search"""
 import requests
 import time
 import json
@@ -21,7 +21,7 @@ def get_url(url, driver):
     # open the web page at the indicated url 
     driver.get(url)
     driver.maximize_window()
-    time.sleep(5)
+    time.sleep(8)
 
 def Accept_button(driver):
     #click on "Accepter" button    
@@ -35,9 +35,9 @@ def Accept_button(driver):
         driver.quit()
 
 def get_datas(url, driver):
-    flight_info = {}
+    flight_infos = {}
 
-    for i in range(3):
+    for i in range(10):
     #get destinations buttons and click on each button
         try:
             all_buttons = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CLASS_NAME, '_TS'))) 
@@ -49,10 +49,6 @@ def get_datas(url, driver):
             if all_buttons:
                 all_buttons[i].click()
 
-        except:
-            driver.quit()
-            
-        try:
             #get the link to flight info
             link_page = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, "//a[@role='link']")))
             link = link_page.get_attribute('href')
@@ -68,19 +64,18 @@ def get_datas(url, driver):
             compagnies = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'codeshares-airline-names')))
             link_flights_tickets = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'booking-link ')))  
 
-            for i in range(3):
-                price = prices[i].text.replace("\n","")
-                real_price = "".join([number for number in price[2:5]]).replace(" ","")
-                compagny = [comp.text for comp in compagnies]
-                link_flight_ticket = link_flights_tickets[i].get_attribute('href')
-                flight_info[f"{city_name},{i}"]= f"{compagny[i]} {clean_datas[i]} prix: {real_price}€, Reservez: {link_flight_ticket}"
-
+            price = prices[i].text.replace("\n","")
+            real_price = "".join([number for number in price[2:5]]).replace(" ","")
+            compagny = [comp.text for comp in compagnies]
+            link_flight_ticket = link_flights_tickets[i].get_attribute('href')
+            flight_infos[city_name]= [f"{compagny[i]} {clean_datas[i]} prix: {real_price}€, Reservez: {link_flight_ticket}" for i in range(4)]
+                
             get_url(url, driver)
-            
+
         except:
             driver.quit()
-    
-    save(flight_info)
+ 
+    save(flight_infos)
 
 def save(dict):
     #create a json file and save dict in it
@@ -102,4 +97,4 @@ if __name__ == "__main__":
     driver = webdriver.Chrome(service=driver_service)
 
     if check_status(url):
-        scrapp_and_send(url,driver)
+        scrapp_and_send(url, driver)
